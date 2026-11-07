@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        font-family: Arial, sans-serif;
+      }
+      .voice-button {
+        width: 100%;
+        height: 44px;
+        border: none;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+        color: #ffffff;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 8px 16px rgba(34, 197, 94, 0.25);
+      }
+      .voice-button.active {
+        background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+      }
+      .voice-button:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
+  <body>
+    <button id="voice-button" class="voice-button">🎙 Speak</button>
+
+    <script>
+      function sendValue(value) {
+        window.parent.postMessage({ type: 'streamlit:setComponentValue', value: value }, '*');
+      }
+
+      function setFrameHeight() {
+        window.parent.postMessage({ type: 'streamlit:setFrameHeight', height: 52 }, '*');
+      }
+
+      const VoiceRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const button = document.getElementById('voice-button');
+
+      if (!VoiceRecognition) {
+        button.disabled = true;
+        button.textContent = 'Mic not supported';
+      } else {
+        const recognition = new VoiceRecognition();
+        recognition.lang = 'en-US';
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        recognition.onstart = function () {
+          button.classList.add('active');
+          button.textContent = 'Listening...';
+        };
+
+        recognition.onresult = function (event) {
+          const transcript = Array.from(event.results)
+            .map((result) => result[0].transcript)
+            .join(' ')
+            .trim();
+
+          if (transcript) {
+            sendValue(transcript);
+          }
+        };
+
+        recognition.onerror = function () {
+          button.classList.remove('active');
+          button.textContent = '🎙 Speak';
+          sendValue('');
+        };
+
+        recognition.onend = function () {
+          button.classList.remove('active');
+          button.textContent = '🎙 Speak';
+        };
+
+        button.addEventListener('click', function () {
+          try {
+            recognition.start();
+          } catch (error) {
+            recognition.stop();
+            recognition.start();
+          }
+        });
+      }
+
+      window.addEventListener('DOMContentLoaded', function () {
+        window.parent.postMessage({ type: 'streamlit:componentReady', args: {} }, '*');
+        setFrameHeight();
+      });
+    </script>
+  </body>
+</html>
